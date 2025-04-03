@@ -193,13 +193,14 @@ function App() {
           scrollY: -window.scrollY,
           windowWidth: reportRef.current.scrollWidth,
           windowHeight: reportRef.current.scrollHeight,
-          scale: window.devicePixelRatio * 2,
+          scale: Math.min(window.devicePixelRatio * 2, 4),
           useCORS: true,
           allowTaint: true,
-          logging: false,
+          foreignObjectRendering: true,
+          logging: true,
           backgroundColor: '#ffffff',
           removeContainer: true,
-          imageTimeout: 15000,
+          imageTimeout: 30000,
           onclone: (clonedDoc) => {
             const element = clonedDoc.querySelector('[role="dialog"]');
             if (element) {
@@ -208,39 +209,65 @@ function App() {
               element.style.width = '100%';
               element.style.margin = '0';
               element.style.padding = '16px';
+              element.style.position = 'static';
+              element.style.overflow = 'visible';
             }
           }
         })
         const image = canvas.toDataURL('image/png', 1.0)
         if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
           try {
-            const blob = await (await fetch(image)).blob()
+            const response = await fetch(image)
+            if (!response.ok) throw new Error('Failed to fetch image data')
+            const blob = await response.blob()
             if (navigator.share && navigator.canShare({ files: [new File([blob], '女M自评报告.png', { type: 'image/png' })] })) {
               await navigator.share({
                 files: [new File([blob], '女M自评报告.png', { type: 'image/png' })]
               })
               setSnackbarMessage('图片已准备好分享！')
             } else {
+              const blobUrl = URL.createObjectURL(blob)
               const link = document.createElement('a')
-              link.href = URL.createObjectURL(blob)
+              link.href = blobUrl
               link.download = '女M自评报告.png'
+              link.style.display = 'none'
               document.body.appendChild(link)
               link.click()
-              document.body.removeChild(link)
-              URL.revokeObjectURL(link.href)
+              setTimeout(() => {
+                document.body.removeChild(link)
+                URL.revokeObjectURL(blobUrl)
+              }, 100)
               setSnackbarMessage('报告已保存为高清图片！')
             }
           } catch (shareError) {
             console.error('分享/保存图片错误:', shareError)
-            setSnackbarMessage('保存图片失败，请重试')
+            // 尝试备用方案
+            try {
+              const link = document.createElement('a')
+              link.href = image
+              link.download = '女M自评报告.png'
+              link.style.display = 'none'
+              document.body.appendChild(link)
+              link.click()
+              setTimeout(() => {
+                document.body.removeChild(link)
+              }, 100)
+              setSnackbarMessage('报告已保存为高清图片！')
+            } catch (fallbackError) {
+              console.error('备用保存方案失败:', fallbackError)
+              setSnackbarMessage('保存图片失败，请重试')
+            }
           }
         } else {
           const link = document.createElement('a')
           link.href = image
           link.download = '女M自评报告.png'
+          link.style.display = 'none'
           document.body.appendChild(link)
           link.click()
-          document.body.removeChild(link)
+          setTimeout(() => {
+            document.body.removeChild(link)
+          }, 100)
           setSnackbarMessage('报告已保存为高清图片！')
         }
         setSnackbarOpen(true)
@@ -261,16 +288,22 @@ function App() {
           filename: '女M自评报告.pdf',
           image: { type: 'jpeg', quality: 1 },
           html2canvas: {
-            scale: 4,
+            scale: Math.min(window.devicePixelRatio * 2, 4),
             useCORS: true,
-            logging: false,
-            imageTimeout: 15000,
+            allowTaint: true,
+            foreignObjectRendering: true,
+            logging: true,
+            imageTimeout: 30000,
             onclone: (clonedDoc) => {
               const element = clonedDoc.querySelector('[role="dialog"]');
               if (element) {
                 element.style.transform = 'none';
                 element.style.maxWidth = '100%';
                 element.style.width = '100%';
+                element.style.position = 'static';
+                element.style.overflow = 'visible';
+                element.style.margin = '0';
+                element.style.padding = '16px';
               }
             }
           },
@@ -278,10 +311,14 @@ function App() {
             unit: 'mm',
             format: 'a4',
             orientation: 'portrait',
-            compress: true
-          }
+            compress: true,
+            hotfixes: ['px_scaling']
+          },
+          enableLinks: false,
+          pagebreak: { mode: 'avoid-all' }
         }
-        await html2pdf().set(opt).from(element).save()
+        const worker = html2pdf().set(opt)
+        await worker.from(element).save()
         setSnackbarMessage('报告已成功保存为PDF！')
         setSnackbarOpen(true)
       } catch (error) {

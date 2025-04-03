@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { Container, Typography, Paper, Grid, Box, Select, MenuItem, Button, Dialog, DialogTitle, DialogContent, DialogActions, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, Snackbar, AppBar, Toolbar, Drawer, List, ListItem, ListItemIcon, ListItemText, createTheme, ThemeProvider } from '@mui/material'
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts'
 import html2canvas from 'html2canvas'
@@ -15,10 +15,10 @@ const CATEGORIES = {
   '🐕 犬奴': ['🔒 囚笼关押', '⛓️ 项圈镣铐', '🍽️ 喂食', '🐾 爬行', '👣 舔足', '👠 踩踏', '🎠 骑乘'],
   '🎎 玩偶奴': ['🎭 角色扮演', '👔 制服诱惑', '🎭 人偶装扮', '💍 乳环', '💎 阴环', '💫 脐环', '✂️ 剃毛', '🔍 内窥镜研究', '🔧 性工具研究', '🎨 作为艺术品', '🪑 作为家具', '🚬 作为烟灰缸', '👗 作为女仆', '🤐 限制说话内容'],
   '🌲 野奴': ['🌳 野外暴露', '⛓️ 野外奴役', '🏃‍♀️ 野外流放', '🌿 野外玩弄', '🏢 公共场合暴露', '🏛️ 公共场合玩弄', '🎗️ 公开场合捆绑（衣服内）', '📱 公开场合器具（衣服内）', '👀 露阴（像朋友）', '👥 露阴（向生人）', '🔐 贞操带', '📿 公开场合项圈'],
-  '🐾 兽奴': ['🐕 兽交', '🐺 群兽轮交', '🐎 人兽同交', '🦁 兽虐', '🐜 昆虫爬身'],
   '⚔️ 刑奴': ['👋 耳光', '🤐 口塞', '💇‍♀️ 扯头发', '👢 皮带', '🎯 鞭子', '🎋 藤条', '🪵 木板', '🏏 棍棒', '🖌️ 毛刷', '⚡️ 虐阴', '🔗 紧缚', '⛓️ 吊缚', '🔒 拘束', '📎 乳夹', '⚡️ 电击', '🕯️ 滴蜡', '📍 针刺', '💉 穿孔', '🔥 烙印', '🎨 刺青', '✂️ 切割', '🔥 火刑', '💧 水刑', '😮‍💨 窒息', '👊 体罚', '🧊 冰块'],
   '🚽 厕奴': ['👅 舔精', '🥛 吞精', '💧 唾液', '💦 喝尿', '🚿 尿浴', '👄 舔阴', '💦 放尿', '🚰 灌肠', '👅 舔肛', '💩 排便', '🛁 粪浴', '🍽️ 吃粪', '🤧 吃痰', '🩸 吃经血'],
   '💭 心奴': ['🗣️ 言语侮辱', '😈 人格侮辱', '🧠 思维控制', '🌐 网络控制', '📢 语言管教'],
+  '🐾 兽奴': ['🐕 兽交', '🐺 群兽轮交', '🐎 人兽同交', '🦁 兽虐', '🐜 昆虫爬身'],
   '✨ 其他': ['👥 多奴调教', '👑 多主调教', '🌐 网络公调', '🪶 瘙痒', '📅 长期圈养', '⏱️ 短期圈养', '😴 剥夺睡眠', '🌀 催眠', '👭 同性性爱']
 }
 
@@ -110,7 +110,16 @@ function App() {
   const [snackbarMessage, setSnackbarMessage] = useState('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [selectedBatchRating, setSelectedBatchRating] = useState('')
+  const [scrollY, setScrollY] = useState(0)
   const reportRef = useRef(null)
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrollY(window.scrollY)
+    }
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   const handleRatingChange = (category, item, value) => {
     setRatings(prev => ({
@@ -184,40 +193,54 @@ function App() {
           scrollY: -window.scrollY,
           windowWidth: reportRef.current.scrollWidth,
           windowHeight: reportRef.current.scrollHeight,
-          scale: window.devicePixelRatio * 2.5,
+          scale: window.devicePixelRatio * 2,
           useCORS: true,
           allowTaint: true,
           logging: false,
           backgroundColor: '#ffffff',
-          imageTimeout: 0,
+          removeContainer: true,
+          imageTimeout: 15000,
           onclone: (clonedDoc) => {
             const element = clonedDoc.querySelector('[role="dialog"]');
             if (element) {
               element.style.transform = 'none';
+              element.style.maxWidth = '100%';
+              element.style.width = '100%';
+              element.style.margin = '0';
+              element.style.padding = '16px';
             }
           }
         })
         const image = canvas.toDataURL('image/png', 1.0)
         if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-          const blob = await (await fetch(image)).blob()
-          if (navigator.share) {
-            await navigator.share({
-              files: [new File([blob], '女M自评报告.png', { type: 'image/png' })]
-            })
-            setSnackbarMessage('图片已准备好分享！')
-          } else {
-            const link = document.createElement('a')
-            link.href = URL.createObjectURL(blob)
-            link.download = '女M自评报告.png'
-            link.click()
-            URL.revokeObjectURL(link.href)
-            setSnackbarMessage('报告已保存为高清图片！')
+          try {
+            const blob = await (await fetch(image)).blob()
+            if (navigator.share && navigator.canShare({ files: [new File([blob], '女M自评报告.png', { type: 'image/png' })] })) {
+              await navigator.share({
+                files: [new File([blob], '女M自评报告.png', { type: 'image/png' })]
+              })
+              setSnackbarMessage('图片已准备好分享！')
+            } else {
+              const link = document.createElement('a')
+              link.href = URL.createObjectURL(blob)
+              link.download = '女M自评报告.png'
+              document.body.appendChild(link)
+              link.click()
+              document.body.removeChild(link)
+              URL.revokeObjectURL(link.href)
+              setSnackbarMessage('报告已保存为高清图片！')
+            }
+          } catch (shareError) {
+            console.error('分享/保存图片错误:', shareError)
+            setSnackbarMessage('保存图片失败，请重试')
           }
         } else {
           const link = document.createElement('a')
           link.href = image
           link.download = '女M自评报告.png'
+          document.body.appendChild(link)
           link.click()
+          document.body.removeChild(link)
           setSnackbarMessage('报告已保存为高清图片！')
         }
         setSnackbarOpen(true)
@@ -234,16 +257,35 @@ function App() {
       try {
         const element = reportRef.current
         const opt = {
-          margin: 1,
+          margin: [10, 10, 10, 10],
           filename: '女M自评报告.pdf',
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2 },
-          jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+          image: { type: 'jpeg', quality: 1 },
+          html2canvas: {
+            scale: 4,
+            useCORS: true,
+            logging: false,
+            imageTimeout: 15000,
+            onclone: (clonedDoc) => {
+              const element = clonedDoc.querySelector('[role="dialog"]');
+              if (element) {
+                element.style.transform = 'none';
+                element.style.maxWidth = '100%';
+                element.style.width = '100%';
+              }
+            }
+          },
+          jsPDF: {
+            unit: 'mm',
+            format: 'a4',
+            orientation: 'portrait',
+            compress: true
+          }
         }
         await html2pdf().set(opt).from(element).save()
         setSnackbarMessage('报告已成功保存为PDF！')
         setSnackbarOpen(true)
       } catch (error) {
+        console.error('导出PDF错误:', error)
         setSnackbarMessage('导出PDF失败，请重试')
         setSnackbarOpen(true)
       }
@@ -337,6 +379,56 @@ function App() {
           </List>
         </Box>
       </Drawer>
+
+      <Paper
+        elevation={3}
+        sx={{
+          position: 'fixed',
+          right: { xs: '16px', md: '32px' },
+          top: { xs: scrollY > 100 ? '80px' : '120px', md: scrollY > 100 ? '100px' : '140px' },
+          zIndex: 1000,
+          p: 2,
+          maxWidth: { xs: '200px', md: '250px' },
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(5px)',
+          transition: 'all 0.3s ease',
+          transform: `translateY(${scrollY > 100 ? '0' : '-10px'})`,
+          opacity: scrollY > 100 ? 1 : 0.8,
+          '&:hover': {
+            opacity: 1,
+            transform: 'translateY(0) scale(1.02)',
+            backgroundColor: 'rgba(255, 255, 255, 0.98)'
+          }
+        }}
+      >
+        <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1, color: 'primary.main' }}>
+          评分说明
+        </Typography>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+          {RATING_OPTIONS.map((rating) => (
+            <Box key={rating} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box
+                sx={{
+                  width: 16,
+                  height: 16,
+                  borderRadius: '50%',
+                  backgroundColor: getRatingColor(rating)
+                }}
+              />
+              <Typography variant="body2">
+                {rating} = {{
+                  'SSS': '非常喜欢',
+                  'SS': '喜欢',
+                  'S': '接受',
+                  'Q': '不喜欢但会做',
+                  'N': '拒绝',
+                  'W': '未知'
+                }[rating]}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+      </Paper>
 
       <Container maxWidth="lg" sx={{
         py: 8,
@@ -474,38 +566,40 @@ function App() {
           <DialogTitle sx={{ textAlign: 'center', fontWeight: 'bold', pt: { xs: 2, md: 3 } }}>
             女M自评详细报告
           </DialogTitle>
-          <DialogContent ref={reportRef} sx={{ px: { xs: 2, md: 3 }, py: 3 }}>
-            <Box sx={{ mb: 4, maxWidth: '100%', overflow: 'hidden' }}>
-              <Typography variant="h6" gutterBottom sx={{ color: 'primary.main', textAlign: 'center' }}>
+          <DialogContent ref={reportRef} sx={{ px: { xs: 2, md: 3 }, py: 3, overflowX: 'hidden' }}>            
+            <Box sx={{ mb: 4, maxWidth: '100%', overflow: 'hidden' }}>              
+              <Typography variant="h6" gutterBottom sx={{ color: 'primary.main', textAlign: 'center', mb: 3 }}>                
                 总体评分分布
               </Typography>
               <Box sx={{
                 width: '100%',
-                height: { xs: 280, sm: 300, md: 300 },
+                height: { xs: 300, sm: 350, md: 400 },
                 position: 'relative',
                 mb: 4,
                 display: 'flex',
                 justifyContent: 'center',
-                alignItems: 'center'
+                alignItems: 'center',
+                overflow: 'visible'
               }}>
                 <RadarChart
-                  width={window.innerWidth < 600 ? 280 : 500}
-                  height={window.innerWidth < 600 ? 260 : 300}
+                  width={window.innerWidth < 600 ? 300 : 500}
+                  height={window.innerWidth < 600 ? 280 : 350}
                   data={getRadarData()}
-                  style={{ maxWidth: '100%' }}
+                  style={{ maxWidth: '100%', margin: '0 auto' }}
                 >
                   <PolarGrid stroke="#e0e0e0" />
                   <PolarAngleAxis
                     dataKey="category"
                     tick={{
                       fill: '#2c3e50',
-                      fontSize: window.innerWidth < 600 ? 10 : 14
+                      fontSize: window.innerWidth < 600 ? 11 : 14,
+                      fontWeight: 500
                     }}
                   />
                   <PolarRadiusAxis angle={30} domain={[0, 6]} tick={{ fill: '#2c3e50' }} />
                   <Radar name="评分" dataKey="value" stroke="#6200ea" fill="#6200ea" fillOpacity={0.6} animationDuration={500} />
                   <Radar name="满分" dataKey="fullMark" stroke="#ddd" strokeDasharray="3 3" fill="none" />
-                  <Tooltip />
+                  <Tooltip contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }} />
                   <Legend wrapperStyle={{ fontSize: window.innerWidth < 600 ? 12 : 14 }} />
                 </RadarChart>
               </Box>
